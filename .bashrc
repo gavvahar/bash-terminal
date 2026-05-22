@@ -6,6 +6,9 @@ case $- in
       *) return;;
 esac
 
+# ── ble.sh — must load before everything else ────────────────────────────────
+[[ -f ~/.local/share/blesh/ble.sh ]] && source ~/.local/share/blesh/ble.sh --noattach
+
 # ── Config directory (where this repo is installed) ───────────────────────────
 _BASH_TERMINAL_DIR="$HOME/.config/bash-terminal"
 
@@ -192,7 +195,12 @@ if ! shopt -oq posix; then
 fi
 
 # ── fzf ───────────────────────────────────────────────────────────────────────
-[ -f ~/.fzf.bash ] && source ~/.fzf.bash
+if [[ ${BLE_VERSION-} ]]; then
+    ble-import -d integration/fzf-completion
+    ble-import -d integration/fzf-key-bindings
+else
+    [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+fi
 
 # ── Starship prompt ───────────────────────────────────────────────────────────
 if command -v starship &>/dev/null; then
@@ -443,6 +451,13 @@ jarvis-locate() {
             ;;
     esac
 }
+
+# ── ble.sh attach — must be last ─────────────────────────────────────────────
+if [[ ${BLE_VERSION-} ]]; then
+    bleopt complete_auto_complete=1
+    ble-face -s auto_complete fg=242
+    ble-attach
+fi
 
 # ── conda initialize (optional) ───────────────────────────────────────────────
 _CONDA_BIN="$HOME/miniconda3/bin/conda"
