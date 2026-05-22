@@ -104,9 +104,12 @@ _sys_container() {
 
 _box_width() {
     local cols
-    cols=$(tput cols 2>/dev/null || echo "${COLUMNS:-80}")
-    local w=$(( cols - 4 ))
-    [ "$w" -gt 76 ] && w=76
+    cols=$(stty size 2>/dev/null | awk '{print $2}')
+    [ -z "$cols" ] && cols=$(tput cols 2>/dev/null)
+    [ -z "$cols" ] && cols="${COLUMNS}"
+    cols="${cols:-60}"
+    local w=$(( cols - 5 ))  # 2 spaces + 2 borders + 1 margin
+    [ "$w" -gt 74 ] && w=74
     [ "$w" -lt 40 ] && w=40
     echo "$w"
 }
