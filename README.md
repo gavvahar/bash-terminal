@@ -13,7 +13,21 @@ Works on **Linux**, **macOS**, and **Windows** (Git Bash / WSL2).
 | Windows (WSL2) | Fully supported, behaves like Linux |
 | Windows (Git Bash) | Supported; memory/CPU stats may be limited |
 
-## Quick install
+## One-line setup
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/gavvahar/bash-terminal/main/setup.sh)
+```
+
+Then reload:
+
+```bash
+source ~/.bashrc
+```
+
+---
+
+## Step-by-step install
 
 ### 1. Prerequisites
 
