@@ -6,6 +6,9 @@ case $- in
       *) return;;
 esac
 
+# ── Config directory (where this repo is installed) ───────────────────────────
+_BASH_TERMINAL_DIR="$HOME/.config/bash-terminal"
+
 # ── History ───────────────────────────────────────────────────────────────────
 HISTCONTROL=ignoreboth
 shopt -s histappend
@@ -17,17 +20,19 @@ shopt -s checkwinsize
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
 # ── PATH ──────────────────────────────────────────────────────────────────────
-export PATH="$HOME/.local/bin:$HOME/.fzf/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
+# Add fzf to PATH only if not already present
+[[ ":$PATH:" != *":$HOME/.fzf/bin:"* ]] && [ -d "$HOME/.fzf/bin" ] && export PATH="$HOME/.fzf/bin:$PATH"
 
 # ── AI theme — FRIDAY on Fridays, JARVIS all other days ──────────────────────
 if [ "$(date +%u)" -eq 5 ]; then
     export JARVIS_MODE="FRIDAY"
-    export STARSHIP_CONFIG="$HOME/.config/fish/starship-friday.toml"
+    export STARSHIP_CONFIG="$_BASH_TERMINAL_DIR/starship-friday.toml"
     _AI_BOLD=$'\e[1;38;2;192;132;252m'
     _AI_NORM=$'\e[38;2;192;132;252m'
 else
     export JARVIS_MODE="JARVIS"
-    export STARSHIP_CONFIG="$HOME/.config/fish/starship.toml"
+    export STARSHIP_CONFIG="$_BASH_TERMINAL_DIR/starship.toml"
     _AI_BOLD=$'\e[1;36m'
     _AI_NORM=$'\e[36m'
 fi
@@ -55,7 +60,7 @@ alias gc='git commit'
 alias gp='git push'
 alias gl='git pull'
 
-# ── Bitwarden SSH agent ───────────────────────────────────────────────────────
+# ── Bitwarden SSH agent (optional) ───────────────────────────────────────────
 if [ -S "$HOME/.bitwarden-ssh-agent.sock" ]; then
     export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
 fi
@@ -73,7 +78,9 @@ fi
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
 # ── Starship prompt ───────────────────────────────────────────────────────────
-eval "$(starship init bash)"
+if command -v starship &>/dev/null; then
+    eval "$(starship init bash)"
+fi
 
 # ── Terminal title ────────────────────────────────────────────────────────────
 _jarvis_set_title() {
@@ -86,7 +93,9 @@ _jarvis_set_title() {
 PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }_jarvis_set_title"
 
 # ── Zoxide ────────────────────────────────────────────────────────────────────
-eval "$(zoxide init bash)"
+if command -v zoxide &>/dev/null; then
+    eval "$(zoxide init bash)"
+fi
 
 # ── Greeting ──────────────────────────────────────────────────────────────────
 _jarvis_greeting() {
@@ -98,7 +107,7 @@ _jarvis_greeting() {
     fi
     datetime=$(date "+%A, %B %d %Y — %I:%M %p")
     uptime_str=$(uptime -p 2>/dev/null | sed 's/^up //')
-    mem_info=$(awk '/^Mem:/ {print $3 "/" $2}' <(free -h 2>/dev/null))
+    mem_info=$(free -h 2>/dev/null | awk '/^Mem:/ {print $3 "/" $2}')
     cpu_load=$(awk '{print $1}' /proc/loadavg 2>/dev/null)
 
     local interior=60
@@ -151,7 +160,7 @@ _jarvis_greeting
 # ── jarvis: system diagnostics ────────────────────────────────────────────────
 jarvis() {
     local mem_info cpu_load disk_root ip_addr uptime_str
-    mem_info=$(awk '/^Mem:/ {print $3 "/" $2}' <(free -h 2>/dev/null))
+    mem_info=$(free -h 2>/dev/null | awk '/^Mem:/ {print $3 "/" $2}')
     cpu_load=$(awk '{print $1 "  " $2 "  " $3}' /proc/loadavg 2>/dev/null)
     disk_root=$(df -h / 2>/dev/null | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')
     ip_addr=$(ip route get 1 2>/dev/null | awk 'NR==1 {for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
@@ -188,24 +197,26 @@ brief() {
     fi
     datetime=$(date "+%A, %B %d %Y — %I:%M %p")
     uptime_str=$(uptime -p 2>/dev/null | sed 's/^up //')
-    mem_info=$(awk '/^Mem:/ {print $3 "/" $2}' <(free -h 2>/dev/null))
+    mem_info=$(free -h 2>/dev/null | awk '/^Mem:/ {print $3 "/" $2}')
     cpu_load=$(awk '{print $1}' /proc/loadavg 2>/dev/null)
     disk_root=$(df -h / 2>/dev/null | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')
     ip_addr=$(ip route get 1 2>/dev/null | awk 'NR==1 {for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
 
     local weather_lines=()
     local loc_file="$HOME/.config/bash/jarvis_locations"
-    if [ -f "$loc_file" ] && [ -s "$loc_file" ]; then
-        while IFS= read -r loc; do
-            [ -z "$loc" ] && continue
+    if command -v python3 &>/dev/null && [ -f "$_BASH_TERMINAL_DIR/get_weather.py" ]; then
+        if [ -f "$loc_file" ] && [ -s "$loc_file" ]; then
+            while IFS= read -r loc; do
+                [ -z "$loc" ] && continue
+                local w
+                w=$(python3 "$_BASH_TERMINAL_DIR/get_weather.py" "$loc" 2>/dev/null)
+                [ -n "$w" ] && weather_lines+=("$w")
+            done < "$loc_file"
+        else
             local w
-            w=$(python3 ~/.config/fish/get_weather.py "$loc" 2>/dev/null)
+            w=$(python3 "$_BASH_TERMINAL_DIR/get_weather.py" 2>/dev/null)
             [ -n "$w" ] && weather_lines+=("$w")
-        done < "$loc_file"
-    else
-        local w
-        w=$(python3 ~/.config/fish/get_weather.py 2>/dev/null)
-        [ -n "$w" ] && weather_lines+=("$w")
+        fi
     fi
 
     local interior=60
@@ -299,17 +310,17 @@ jarvis-locate() {
     esac
 }
 
-# ── conda initialize ──────────────────────────────────────────────────────────
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('$HOME/miniconda3/bin/conda' 'shell.bash' 'hook' 2>/dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
+# ── conda initialize (optional) ───────────────────────────────────────────────
+_CONDA_BIN="$HOME/miniconda3/bin/conda"
+if command -v conda &>/dev/null || [ -x "$_CONDA_BIN" ]; then
+    __conda_setup="$("$_CONDA_BIN" 'shell.bash' 'hook' 2>/dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
+    elif [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
         . "$HOME/miniconda3/etc/profile.d/conda.sh"
     else
         export PATH="$HOME/miniconda3/bin:$PATH"
     fi
+    unset __conda_setup
 fi
-unset __conda_setup
-# <<< conda initialize <<<
+unset _CONDA_BIN
