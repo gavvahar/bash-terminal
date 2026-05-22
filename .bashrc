@@ -90,6 +90,18 @@ _sys_cpu3() {
     esac
 }
 
+_sys_container() {
+    if command -v systemd-detect-virt &>/dev/null; then
+        local virt
+        virt=$(systemd-detect-virt --container 2>/dev/null)
+        [ "$virt" != "none" ] && [ -n "$virt" ] && echo "$virt"
+    elif [ -f "/.dockerenv" ]; then
+        echo "docker"
+    elif [ -f "/run/host/container-manager" ]; then
+        cat /run/host/container-manager 2>/dev/null
+    fi
+}
+
 _box_width() {
     local cols
     cols=$(tput cols 2>/dev/null || echo "${COLUMNS:-80}")
@@ -209,11 +221,12 @@ _jarvis_greeting() {
     elif [ "$hour" -lt 17 ]; then period="afternoon"
     else                           period="evening"
     fi
-    local datetime uptime_str mem_info cpu_load
+    local datetime uptime_str mem_info cpu_load container
     datetime=$(date "+%A, %B %d %Y — %I:%M %p")
     uptime_str=$(_sys_uptime)
     mem_info=$(_sys_mem)
     cpu_load=$(_sys_cpu1)
+    container=$(_sys_container)
 
     local interior
     interior=$(_box_width)
@@ -236,7 +249,8 @@ _jarvis_greeting() {
         printf "  ║%-${interior}s${b}║\n${r}${n}" "  Hey, $(whoami). Good $period."
         printf "  ║%-${interior}s${b}║\n${r}${n}" "  $datetime"
         [ -n "$uptime_str" ] && printf "  ║%-${interior}s${b}║\n${r}${n}" "  Uptime: $uptime_str"
-        [ -n "$mem_info" ]   && printf "  ║%-${interior}s${b}║\n" "  Memory: $mem_info   CPU: $cpu_load"
+        [ -n "$mem_info" ]   && printf "  ║%-${interior}s${b}║\n${r}${n}" "  Memory: $mem_info   CPU: $cpu_load"
+        [ -n "$container" ]  && printf "  ║%-${interior}s${b}║\n" "  Container: $container"
         printf "${b}  ╠%s╣\n" "$sep"
         printf "  ║${r}${n}%-${interior}s${b}║\n" "  ◈ $status_msg"
         printf "  ╚%s╝${r}\n\n" "$sep"
@@ -255,7 +269,8 @@ _jarvis_greeting() {
         printf "  ║%-${interior}s${b}║\n${r}${n}" "  Good $period, $(whoami)."
         printf "  ║%-${interior}s${b}║\n${r}${n}" "  $datetime"
         [ -n "$uptime_str" ] && printf "  ║%-${interior}s${b}║\n${r}${n}" "  Uptime: $uptime_str"
-        [ -n "$mem_info" ]   && printf "  ║%-${interior}s${b}║\n" "  Memory: $mem_info   CPU: $cpu_load"
+        [ -n "$mem_info" ]   && printf "  ║%-${interior}s${b}║\n${r}${n}" "  Memory: $mem_info   CPU: $cpu_load"
+        [ -n "$container" ]  && printf "  ║%-${interior}s${b}║\n" "  Container: $container"
         printf "${b}  ╠%s╣\n" "$sep"
         printf "  ║${r}${n}%-${interior}s${b}║\n" "  ◈ $status_msg"
         printf "  ╚%s╝${r}\n\n" "$sep"
@@ -290,6 +305,9 @@ jarvis() {
     [ -n "$cpu_load" ]   && printf "  ║%-${interior}s${b}║${r}${n}\n" "  CPU Load: $cpu_load  (1m 5m 15m)"
     [ -n "$disk_root" ]  && printf "  ║%-${interior}s${b}║${r}${n}\n" "  Disk /:   $disk_root"
     [ -n "$ip_addr" ]    && printf "  ║%-${interior}s${b}║${r}${n}\n" "  Network:  $ip_addr"
+    local container
+    container=$(_sys_container)
+    [ -n "$container" ] && printf "  ║%-${interior}s${b}║${r}${n}\n" "  Container: $container"
     if [ -n "$CONDA_DEFAULT_ENV" ] && [ "$CONDA_DEFAULT_ENV" != "base" ]; then
         printf "  ║%-${interior}s${b}║${r}${n}\n" "  Conda:    $CONDA_DEFAULT_ENV"
     fi
