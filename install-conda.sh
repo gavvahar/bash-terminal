@@ -2,7 +2,11 @@
 
 set -e
 
-CONDA="$HOME/miniconda3/bin/conda"
+# conda binary lives in different places on Windows vs Unix
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) CONDA="$HOME/miniconda3/Scripts/conda" ;;
+    *)                     CONDA="$HOME/miniconda3/bin/conda"     ;;
+esac
 
 if command -v conda &>/dev/null || [[ -x "$CONDA" ]]; then
     echo "✅ Conda already installed"
@@ -10,18 +14,25 @@ else
     echo "Installing Miniconda..."
     case "$(uname -s)-$(uname -m)" in
         Darwin-arm64)
-            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh ;;
+            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
+            bash /tmp/miniconda.sh -b -p "$HOME/miniconda3"
+            rm /tmp/miniconda.sh ;;
         Darwin-*)
-            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh ;;
+            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+            bash /tmp/miniconda.sh -b -p "$HOME/miniconda3"
+            rm /tmp/miniconda.sh ;;
         MINGW*|MSYS*|CYGWIN*)
-            echo "On Windows, download and run the Miniconda installer from:"
-            echo "  https://docs.conda.io/en/latest/miniconda.html"
-            exit 0 ;;
+            curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe \
+                --output "$HOME/Miniconda3-latest-Windows-x86_64.exe"
+            "$HOME/Miniconda3-latest-Windows-x86_64.exe" \
+                /InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S \
+                /D="$(cygpath -w "$HOME/miniconda3")"
+            rm "$HOME/Miniconda3-latest-Windows-x86_64.exe" ;;
         *)
-            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh ;;
+            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+            bash /tmp/miniconda.sh -b -p "$HOME/miniconda3"
+            rm /tmp/miniconda.sh ;;
     esac
-    bash /tmp/miniconda.sh -b -p "$HOME/miniconda3"
-    rm /tmp/miniconda.sh
     echo "✅ Miniconda installed"
 fi
 
