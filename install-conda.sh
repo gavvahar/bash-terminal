@@ -29,9 +29,9 @@ else
                 /D="$(cygpath -w "$HOME/miniconda3")"
             rm "$HOME/Miniconda3-latest-Windows-x86_64.exe" ;;
         *)
-            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-            bash /tmp/miniconda.sh -b -p "$HOME/miniconda3"
-            rm /tmp/miniconda.sh ;;
+            curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+            bash Miniconda3-latest-Linux-x86_64.sh -b -p "$HOME/miniconda3"
+            rm Miniconda3-latest-Linux-x86_64.sh ;;
     esac
     echo "✅ Miniconda installed"
 fi
