@@ -90,6 +90,15 @@ _sys_cpu3() {
     esac
 }
 
+_box_width() {
+    local cols
+    cols=$(tput cols 2>/dev/null || echo "${COLUMNS:-80}")
+    local w=$(( cols - 4 ))
+    [ "$w" -gt 76 ] && w=76
+    [ "$w" -lt 40 ] && w=40
+    echo "$w"
+}
+
 _sys_ip() {
     case "$_JARVIS_OS" in
         mac)
@@ -206,7 +215,8 @@ _jarvis_greeting() {
     mem_info=$(_sys_mem)
     cpu_load=$(_sys_cpu1)
 
-    local interior=60
+    local interior
+    interior=$(_box_width)
     local sep hdr hdr_len hdr_fill
     sep=$(python3 -c "print('═' * $interior, end='')")
 
@@ -264,7 +274,8 @@ jarvis() {
     ip_addr=$(_sys_ip)
     uptime_str=$(_sys_uptime)
 
-    local interior=54
+    local interior
+    interior=$(_box_width)
     local sep hdr hdr_len hdr_fill
     sep=$(python3 -c "print('═' * $interior, end='')")
     hdr="══[ J.A.R.V.I.S. DIAGNOSTICS ]"
@@ -320,7 +331,8 @@ brief() {
         fi
     fi
 
-    local interior=60
+    local interior
+    interior=$(_box_width)
     local sep hdr hdr_len hdr_fill
     sep=$(python3 -c "print('═' * $interior, end='')")
     if [ "$JARVIS_MODE" = "FRIDAY" ]; then

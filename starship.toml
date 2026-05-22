@@ -110,7 +110,7 @@ symbol = "cmake "
 symbol = "cobol "
 
 [container]
-symbol = "container "
+disabled = true
 
 [crystal]
 symbol = "cr "
