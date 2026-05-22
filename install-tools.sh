@@ -2,6 +2,8 @@
 
 set -e
 
+_OS="$(uname -s)"
+
 # ── Starship ──────────────────────────────────────────────────────────────────
 if command -v starship &>/dev/null; then
     echo "✅ Starship already installed"
@@ -26,8 +28,6 @@ if [[ -x "$HOME/.fzf/bin/fzf" ]] || command -v fzf &>/dev/null; then
 else
     echo "Installing fzf..."
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-    ~/.fzf/install --bin --no-bash --no-zsh --no-fish
-    # Generate ~/.fzf.bash for shell integration
     ~/.fzf/install --bash --no-zsh --no-fish --no-update-rc
     echo "✅ Fzf installed"
 fi

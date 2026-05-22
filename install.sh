@@ -17,8 +17,22 @@ if [[ -f "$HOME/.bashrc" && ! -L "$HOME/.bashrc" ]]; then
     mv "$HOME/.bashrc" "$HOME/.bashrc.bak.$(date +%s)"
 fi
 
-ln -sf "$INSTALL_DIR/.bashrc" "$HOME/.bashrc"
-echo "✅ ~/.bashrc symlinked"
+# Try symlink, fall back to copy (Windows may lack symlink permissions)
+if ln -sf "$INSTALL_DIR/.bashrc" "$HOME/.bashrc" 2>/dev/null; then
+    echo "✅ ~/.bashrc symlinked"
+else
+    cp "$INSTALL_DIR/.bashrc" "$HOME/.bashrc"
+    echo "✅ ~/.bashrc copied (run 'cp ~/.config/bash-terminal/.bashrc ~/.bashrc' to update)"
+fi
+
+# macOS: ~/.bashrc is not sourced by default for login shells
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    PROFILE="$HOME/.bash_profile"
+    if ! grep -q '\.bashrc' "$PROFILE" 2>/dev/null; then
+        echo '[ -f ~/.bashrc ] && source ~/.bashrc' >> "$PROFILE"
+        echo "✅ Added ~/.bashrc sourcing to ~/.bash_profile"
+    fi
+fi
 
 echo ""
 echo "Done! Reload your shell:"

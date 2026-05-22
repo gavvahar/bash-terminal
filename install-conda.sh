@@ -8,11 +8,18 @@ if command -v conda &>/dev/null || [[ -x "$CONDA" ]]; then
     echo "✅ Conda already installed"
 else
     echo "Installing Miniconda..."
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
-    else
-        curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    fi
+    case "$(uname -s)-$(uname -m)" in
+        Darwin-arm64)
+            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh ;;
+        Darwin-*)
+            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh ;;
+        MINGW*|MSYS*|CYGWIN*)
+            echo "On Windows, download and run the Miniconda installer from:"
+            echo "  https://docs.conda.io/en/latest/miniconda.html"
+            exit 0 ;;
+        *)
+            curl -fsSL -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh ;;
+    esac
     bash /tmp/miniconda.sh -b -p "$HOME/miniconda3"
     rm /tmp/miniconda.sh
     echo "✅ Miniconda installed"

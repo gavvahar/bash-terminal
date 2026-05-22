@@ -9,6 +9,13 @@ esac
 # ── Config directory (where this repo is installed) ───────────────────────────
 _BASH_TERMINAL_DIR="$HOME/.config/bash-terminal"
 
+# ── OS detection ─────────────────────────────────────────────────────────────
+case "$(uname -s)" in
+    Darwin*)  _JARVIS_OS="mac"     ;;
+    MINGW*|MSYS*|CYGWIN*) _JARVIS_OS="windows" ;;
+    *)        _JARVIS_OS="linux"   ;;
+esac
+
 # ── History ───────────────────────────────────────────────────────────────────
 HISTCONTROL=ignoreboth
 shopt -s histappend
@@ -21,8 +28,89 @@ shopt -s checkwinsize
 
 # ── PATH ──────────────────────────────────────────────────────────────────────
 export PATH="$HOME/.local/bin:$PATH"
-# Add fzf to PATH only if not already present
 [[ ":$PATH:" != *":$HOME/.fzf/bin:"* ]] && [ -d "$HOME/.fzf/bin" ] && export PATH="$HOME/.fzf/bin:$PATH"
+if [[ "$_JARVIS_OS" == "mac" ]]; then
+    [ -d "/opt/homebrew/bin" ] && [[ ":$PATH:" != *":/opt/homebrew/bin:"* ]] && export PATH="/opt/homebrew/bin:$PATH"
+    [ -d "/usr/local/bin"    ] && [[ ":$PATH:" != *":/usr/local/bin:"*    ]] && export PATH="/usr/local/bin:$PATH"
+fi
+
+# ── System info helpers (OS-aware) ───────────────────────────────────────────
+_sys_uptime() {
+    case "$_JARVIS_OS" in
+        mac)
+            uptime 2>/dev/null \
+                | sed 's/.*up //' \
+                | sed 's/,[[:space:]]*[0-9]*[[:space:]]*users\{0,1\}.*//' \
+                | sed 's/^[[:space:]]*//'
+            ;;
+        windows)
+            uptime 2>/dev/null | sed 's/^up //' || true ;;
+        *)
+            uptime -p 2>/dev/null | sed 's/^up //' ;;
+    esac
+}
+
+_sys_mem() {
+    case "$_JARVIS_OS" in
+        mac)
+            python3 -c "
+import subprocess, re
+vm = subprocess.run(['vm_stat'], capture_output=True, text=True).stdout
+p  = int(re.search(r'page size of (\d+)', vm).group(1))
+g  = lambda k: int(re.search(k + r':\s+(\d+)', vm).group(1)) * p
+u  = g('Pages active') + g('Pages wired down')
+try: u += g('Pages occupied by compressor')
+except: pass
+t = int(subprocess.run(['sysctl','-n','hw.memsize'], capture_output=True, text=True).stdout)
+h = lambda b: f'{b/1073741824:.1f}Gi' if b >= 1073741824 else f'{b/1048576:.0f}Mi'
+print(h(u) + '/' + h(t))
+" 2>/dev/null ;;
+        windows)
+            wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value 2>/dev/null \
+                | awk -F= 'BEGIN{t=0;f=0} /TotalVisible/{t=$2+0} /FreePhysical/{f=$2+0}
+                           END{if(t>0) printf "%.0fMi/%.0fMi\n",(t-f)/1024,t/1024}' || true ;;
+        *)
+            free -h 2>/dev/null | awk '/^Mem:/ {print $3 "/" $2}' ;;
+    esac
+}
+
+_sys_cpu1() {
+    case "$_JARVIS_OS" in
+        mac)     sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}' ;;
+        windows) true ;;
+        *)       awk '{print $1}' /proc/loadavg 2>/dev/null ;;
+    esac
+}
+
+_sys_cpu3() {
+    case "$_JARVIS_OS" in
+        mac)     sysctl -n vm.loadavg 2>/dev/null | awk '{print $2 "  " $3 "  " $4}' ;;
+        windows) true ;;
+        *)       awk '{print $1 "  " $2 "  " $3}' /proc/loadavg 2>/dev/null ;;
+    esac
+}
+
+_sys_ip() {
+    case "$_JARVIS_OS" in
+        mac)
+            local iface
+            iface=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}')
+            [ -n "$iface" ] && ipconfig getifaddr "$iface" 2>/dev/null ;;
+        windows)
+            ip route get 1 2>/dev/null \
+                | awk 'NR==1{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}' \
+            || python3 -c "
+import socket
+s = socket.socket()
+s.connect(('8.8.8.8', 80))
+print(s.getsockname()[0])
+s.close()
+" 2>/dev/null || true ;;
+        *)
+            ip route get 1 2>/dev/null \
+                | awk 'NR==1{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}' ;;
+    esac
+}
 
 # ── AI theme — FRIDAY on Fridays, JARVIS all other days ──────────────────────
 if [ "$(date +%u)" -eq 5 ]; then
@@ -45,6 +133,9 @@ if [ -x /usr/bin/dircolors ]; then
     alias grep='grep --color=auto'
     alias fgrep='fgrep --color=auto'
     alias egrep='egrep --color=auto'
+elif [[ "$_JARVIS_OS" == "mac" ]]; then
+    alias ls='ls -G'
+    alias grep='grep --color=auto'
 fi
 
 alias ll='ls -alF'
@@ -71,6 +162,8 @@ if ! shopt -oq posix; then
         . /usr/share/bash-completion/bash_completion
     elif [ -f /etc/bash_completion ]; then
         . /etc/bash_completion
+    elif [[ "$_JARVIS_OS" == "mac" ]] && [ -f "/opt/homebrew/etc/profile.d/bash_completion.sh" ]; then
+        . "/opt/homebrew/etc/profile.d/bash_completion.sh"
     fi
 fi
 
@@ -99,16 +192,19 @@ fi
 
 # ── Greeting ──────────────────────────────────────────────────────────────────
 _jarvis_greeting() {
-    local hour period datetime uptime_str mem_info cpu_load
+    command -v python3 &>/dev/null || return
+
+    local hour period
     hour=$(date +%H)
     if   [ "$hour" -lt 12 ]; then period="morning"
     elif [ "$hour" -lt 17 ]; then period="afternoon"
     else                           period="evening"
     fi
+    local datetime uptime_str mem_info cpu_load
     datetime=$(date "+%A, %B %d %Y — %I:%M %p")
-    uptime_str=$(uptime -p 2>/dev/null | sed 's/^up //')
-    mem_info=$(free -h 2>/dev/null | awk '/^Mem:/ {print $3 "/" $2}')
-    cpu_load=$(awk '{print $1}' /proc/loadavg 2>/dev/null)
+    uptime_str=$(_sys_uptime)
+    mem_info=$(_sys_mem)
+    cpu_load=$(_sys_cpu1)
 
     local interior=60
     local sep hdr hdr_len hdr_fill
@@ -159,12 +255,14 @@ _jarvis_greeting
 
 # ── jarvis: system diagnostics ────────────────────────────────────────────────
 jarvis() {
+    command -v python3 &>/dev/null || { echo "python3 required for jarvis"; return 1; }
+
     local mem_info cpu_load disk_root ip_addr uptime_str
-    mem_info=$(free -h 2>/dev/null | awk '/^Mem:/ {print $3 "/" $2}')
-    cpu_load=$(awk '{print $1 "  " $2 "  " $3}' /proc/loadavg 2>/dev/null)
+    mem_info=$(_sys_mem)
+    cpu_load=$(_sys_cpu3)
     disk_root=$(df -h / 2>/dev/null | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')
-    ip_addr=$(ip route get 1 2>/dev/null | awk 'NR==1 {for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
-    uptime_str=$(uptime -p 2>/dev/null | sed 's/^up //')
+    ip_addr=$(_sys_ip)
+    uptime_str=$(_sys_uptime)
 
     local interior=54
     local sep hdr hdr_len hdr_fill
@@ -189,22 +287,25 @@ jarvis() {
 
 # ── brief: morning briefing with weather ─────────────────────────────────────
 brief() {
-    local hour period datetime uptime_str mem_info cpu_load disk_root ip_addr
+    command -v python3 &>/dev/null || { echo "python3 required for brief"; return 1; }
+
+    local hour period
     hour=$(date +%H)
     if   [ "$hour" -lt 12 ]; then period="morning"
     elif [ "$hour" -lt 17 ]; then period="afternoon"
     else                           period="evening"
     fi
+    local datetime uptime_str mem_info cpu_load disk_root ip_addr
     datetime=$(date "+%A, %B %d %Y — %I:%M %p")
-    uptime_str=$(uptime -p 2>/dev/null | sed 's/^up //')
-    mem_info=$(free -h 2>/dev/null | awk '/^Mem:/ {print $3 "/" $2}')
-    cpu_load=$(awk '{print $1}' /proc/loadavg 2>/dev/null)
+    uptime_str=$(_sys_uptime)
+    mem_info=$(_sys_mem)
+    cpu_load=$(_sys_cpu1)
     disk_root=$(df -h / 2>/dev/null | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')
-    ip_addr=$(ip route get 1 2>/dev/null | awk 'NR==1 {for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
+    ip_addr=$(_sys_ip)
 
     local weather_lines=()
     local loc_file="$HOME/.config/bash/jarvis_locations"
-    if command -v python3 &>/dev/null && [ -f "$_BASH_TERMINAL_DIR/get_weather.py" ]; then
+    if [ -f "$_BASH_TERMINAL_DIR/get_weather.py" ]; then
         if [ -f "$loc_file" ] && [ -s "$loc_file" ]; then
             while IFS= read -r loc; do
                 [ -z "$loc" ] && continue
