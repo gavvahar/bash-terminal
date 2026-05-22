@@ -7,11 +7,11 @@ case "$(uname -s)" in
         echo "Installing prerequisites (Linux)..."
         if command -v apt &>/dev/null; then
             sudo apt update
-            sudo apt install -y unzip curl git python3 fontconfig libatomic1
+            sudo apt install -y unzip curl git python3 fontconfig libatomic1 bash-completion
         elif command -v dnf &>/dev/null; then
-            sudo dnf install -y unzip curl git python3 fontconfig
+            sudo dnf install -y unzip curl git python3 fontconfig bash-completion
         elif command -v pacman &>/dev/null; then
-            sudo pacman -Sy --noconfirm unzip curl git python fontconfig
+            sudo pacman -Sy --noconfirm unzip curl git python fontconfig bash-completion
         else
             echo "Unsupported package manager. Install manually: curl git python3"
             exit 1
@@ -30,7 +30,7 @@ case "$(uname -s)" in
             echo "  Add $(brew --prefix)/bin/bash to /etc/shells and run:"
             echo "  chsh -s \$(brew --prefix)/bin/bash"
         fi
-        brew install git python3
+        brew install git python3 bash-completion@2
         ;;
     MINGW*|MSYS*|CYGWIN*)
         echo "Windows detected."
