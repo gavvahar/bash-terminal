@@ -19,6 +19,12 @@ case "$(uname -s)" in
     *)        _JARVIS_OS="linux"   ;;
 esac
 
+# ── Locale: ensure UTF-8 so printf pads by character width, not bytes ────────
+case "${LC_ALL:-${LC_CTYPE:-$LANG}}" in
+    *UTF-8*|*utf8*|*utf-8*) ;;
+    *) export LC_CTYPE=C.UTF-8 ;;
+esac
+
 # ── History ───────────────────────────────────────────────────────────────────
 HISTCONTROL=ignoreboth
 shopt -s histappend
@@ -111,6 +117,19 @@ _box_width() {
     [ "$w" -gt 60 ] && w=60  # match fish config default
     [ "$w" -lt 40 ] && w=40
     echo "$w"
+}
+
+_brow() {
+    # Unicode-aware padding: outputs $1 padded to exactly $2 display columns.
+    # bash ${#var} counts bytes; python3 len() counts chars. We adjust the
+    # printf field width to compensate for multibyte chars (e.g. — ◈).
+    local text="$1" width="$2"
+    local byte_len=${#text}
+    local char_len
+    char_len=$(BROW_T="$text" python3 -c \
+        "import os; print(len(os.environ['BROW_T']))" 2>/dev/null) \
+        || char_len=$byte_len
+    printf "%-$(( width + byte_len - char_len ))s" "$text"
 }
 
 _sys_ip() {
@@ -251,15 +270,15 @@ _jarvis_greeting() {
         hdr_fill=$(python3 -c "print('═' * ($interior - $hdr_len), end='')")
 
         printf "${b}\n  ╔%s%s╗\n" "$hdr" "$hdr_fill"
-        printf "  ║${r}${n}%-${interior}s${b}║\n" "  Female Replacement Intelligent Digital Asst."
+        printf "  ║${r}${n}%s${b}║\n" "$(_brow "  Female Replacement Intelligent Digital Asst." "$interior")"
         printf "  ╠%s╣\n${r}${n}" "$sep"
-        printf "  ║%-${interior}s${b}║\n${r}${n}" "  Hey, $(whoami). Good $period."
-        printf "  ║%-${interior}s${b}║\n${r}${n}" "  $datetime"
-        [ -n "$uptime_str" ] && printf "  ║%-${interior}s${b}║\n${r}${n}" "  Uptime: $uptime_str"
-        [ -n "$mem_info" ]   && printf "  ║%-${interior}s${b}║\n${r}${n}" "  Memory: $mem_info   CPU: $cpu_load"
-        [ -n "$container" ]  && printf "  ║%-${interior}s${b}║\n" "  Container: $container"
+        printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Hey, $(whoami). Good $period." "$interior")"
+        printf "  ║%s${b}║\n${r}${n}" "$(_brow "  $datetime" "$interior")"
+        [ -n "$uptime_str" ] && printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Uptime: $uptime_str" "$interior")"
+        [ -n "$mem_info" ]   && printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Memory: $mem_info   CPU: $cpu_load" "$interior")"
+        [ -n "$container" ]  && printf "  ║%s${b}║\n" "$(_brow "  Container: $container" "$interior")"
         printf "${b}  ╠%s╣\n" "$sep"
-        printf "  ║${r}${n}%-${interior}s${b}║\n" "  ◈ $status_msg"
+        printf "  ║${r}${n}%s${b}║\n" "$(_brow "  ◈ $status_msg" "$interior")"
         printf "  ╚%s╝${r}\n\n" "$sep"
     else
         local msgs=("All systems operational." "Running at peak efficiency."
@@ -271,15 +290,15 @@ _jarvis_greeting() {
         hdr_fill=$(python3 -c "print('═' * ($interior - $hdr_len), end='')")
 
         printf "${b}\n  ╔%s%s╗\n" "$hdr" "$hdr_fill"
-        printf "  ║${r}${n}%-${interior}s${b}║\n" "  Just A Rather Very Intelligent System"
+        printf "  ║${r}${n}%s${b}║\n" "$(_brow "  Just A Rather Very Intelligent System" "$interior")"
         printf "  ╠%s╣\n${r}${n}" "$sep"
-        printf "  ║%-${interior}s${b}║\n${r}${n}" "  Good $period, $(whoami)."
-        printf "  ║%-${interior}s${b}║\n${r}${n}" "  $datetime"
-        [ -n "$uptime_str" ] && printf "  ║%-${interior}s${b}║\n${r}${n}" "  Uptime: $uptime_str"
-        [ -n "$mem_info" ]   && printf "  ║%-${interior}s${b}║\n${r}${n}" "  Memory: $mem_info   CPU: $cpu_load"
-        [ -n "$container" ]  && printf "  ║%-${interior}s${b}║\n" "  Container: $container"
+        printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Good $period, $(whoami)." "$interior")"
+        printf "  ║%s${b}║\n${r}${n}" "$(_brow "  $datetime" "$interior")"
+        [ -n "$uptime_str" ] && printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Uptime: $uptime_str" "$interior")"
+        [ -n "$mem_info" ]   && printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Memory: $mem_info   CPU: $cpu_load" "$interior")"
+        [ -n "$container" ]  && printf "  ║%s${b}║\n" "$(_brow "  Container: $container" "$interior")"
         printf "${b}  ╠%s╣\n" "$sep"
-        printf "  ║${r}${n}%-${interior}s${b}║\n" "  ◈ $status_msg"
+        printf "  ║${r}${n}%s${b}║\n" "$(_brow "  ◈ $status_msg" "$interior")"
         printf "  ╚%s╝${r}\n\n" "$sep"
     fi
 }
@@ -307,16 +326,16 @@ jarvis() {
     local b="$_AI_BOLD" n="$_AI_NORM" r="$_AI_RESET"
 
     printf "${b}\n  ╔%s%s╗\n${r}${n}" "$hdr" "$hdr_fill"
-    [ -n "$uptime_str" ] && printf "  ║%-${interior}s${b}║${r}${n}\n" "  Uptime:   $uptime_str"
-    [ -n "$mem_info" ]   && printf "  ║%-${interior}s${b}║${r}${n}\n" "  Memory:   $mem_info"
-    [ -n "$cpu_load" ]   && printf "  ║%-${interior}s${b}║${r}${n}\n" "  CPU Load: $cpu_load  (1m 5m 15m)"
-    [ -n "$disk_root" ]  && printf "  ║%-${interior}s${b}║${r}${n}\n" "  Disk /:   $disk_root"
-    [ -n "$ip_addr" ]    && printf "  ║%-${interior}s${b}║${r}${n}\n" "  Network:  $ip_addr"
+    [ -n "$uptime_str" ] && printf "  ║%s${b}║${r}${n}\n" "$(_brow "  Uptime:   $uptime_str" "$interior")"
+    [ -n "$mem_info" ]   && printf "  ║%s${b}║${r}${n}\n" "$(_brow "  Memory:   $mem_info" "$interior")"
+    [ -n "$cpu_load" ]   && printf "  ║%s${b}║${r}${n}\n" "$(_brow "  CPU Load: $cpu_load  (1m 5m 15m)" "$interior")"
+    [ -n "$disk_root" ]  && printf "  ║%s${b}║${r}${n}\n" "$(_brow "  Disk /:   $disk_root" "$interior")"
+    [ -n "$ip_addr" ]    && printf "  ║%s${b}║${r}${n}\n" "$(_brow "  Network:  $ip_addr" "$interior")"
     local container
     container=$(_sys_container)
-    [ -n "$container" ] && printf "  ║%-${interior}s${b}║${r}${n}\n" "  Container: $container"
+    [ -n "$container" ] && printf "  ║%s${b}║${r}${n}\n" "$(_brow "  Container: $container" "$interior")"
     if [ -n "$CONDA_DEFAULT_ENV" ] && [ "$CONDA_DEFAULT_ENV" != "base" ]; then
-        printf "  ║%-${interior}s${b}║${r}${n}\n" "  Conda:    $CONDA_DEFAULT_ENV"
+        printf "  ║%s${b}║${r}${n}\n" "$(_brow "  Conda:    $CONDA_DEFAULT_ENV" "$interior")"
     fi
     printf "${b}  ╚%s╝${r}\n\n" "$sep"
 }
@@ -371,27 +390,27 @@ brief() {
     local b="$_AI_BOLD" n="$_AI_NORM" r="$_AI_RESET"
 
     printf "${b}\n  ╔%s%s╗\n${r}${n}" "$hdr" "$hdr_fill"
-    printf "  ║%-${interior}s${b}║\n${r}${n}" "  Good $period. Here is your briefing."
-    printf "  ║%-${interior}s${b}║\n${r}${n}" "  $datetime"
+    printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Good $period. Here is your briefing." "$interior")"
+    printf "  ║%s${b}║\n${r}${n}" "$(_brow "  $datetime" "$interior")"
 
     if [ "${#weather_lines[@]}" -gt 0 ]; then
-        printf "  ║%-${interior}s${b}║\n${r}${n}" ""
-        printf "  ║%-${interior}s${b}║\n${r}${n}" "  Weather:"
+        printf "  ║%s${b}║\n${r}${n}" "$(_brow "" "$interior")"
+        printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Weather:" "$interior")"
         for w in "${weather_lines[@]}"; do
             local wloc wtime wcond
             wloc=$(echo "$w" | awk -F':::' '{printf "%-17.17s", $1}')
             wtime=$(echo "$w" | awk -F':::' '{print $2}')
             wcond=$(echo "$w" | awk -F':::' '{print $3}')
-            printf "  ║%-${interior}s${b}║\n${r}${n}" "    $wloc  $wtime  $wcond"
+            printf "  ║%s${b}║\n${r}${n}" "$(_brow "    $wloc  $wtime  $wcond" "$interior")"
         done
     fi
 
     printf "${b}  ╠%s╣\n${r}${n}" "$sep"
-    printf "  ║%-${interior}s${b}║\n${r}${n}" "  Uptime:   $uptime_str"
-    printf "  ║%-${interior}s${b}║\n${r}${n}" "  Memory:   $mem_info"
-    printf "  ║%-${interior}s${b}║\n${r}${n}" "  CPU:      $cpu_load"
-    printf "  ║%-${interior}s${b}║\n${r}${n}" "  Disk /:   $disk_root"
-    [ -n "$ip_addr" ] && printf "  ║%-${interior}s${b}║\n${r}${n}" "  Network:  $ip_addr"
+    printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Uptime:   $uptime_str" "$interior")"
+    printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Memory:   $mem_info" "$interior")"
+    printf "  ║%s${b}║\n${r}${n}" "$(_brow "  CPU:      $cpu_load" "$interior")"
+    printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Disk /:   $disk_root" "$interior")"
+    [ -n "$ip_addr" ] && printf "  ║%s${b}║\n${r}${n}" "$(_brow "  Network:  $ip_addr" "$interior")"
     printf "${b}  ╚%s╝${r}\n\n" "$sep"
 }
 

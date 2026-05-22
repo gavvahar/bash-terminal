@@ -7,6 +7,7 @@ case "$(uname -s)" in
         echo "Installing prerequisites (Linux)..."
         if command -v apt &>/dev/null; then
             sudo apt update
+
             sudo apt install -y unzip curl git python3 fontconfig libatomic1 bash-completion gawk make
         elif command -v dnf &>/dev/null; then
             sudo dnf install -y unzip curl git python3 fontconfig bash-completion gawk make

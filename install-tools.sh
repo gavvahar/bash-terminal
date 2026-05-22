@@ -41,6 +41,7 @@ case "$(uname -s)" in
             echo "✅ ble.sh already installed"
         else
             echo "Installing ble.sh..."
+            rm -rf /tmp/blesh-src
             git clone --depth 1 https://github.com/akinomyoga/ble.sh.git /tmp/blesh-src
             make -C /tmp/blesh-src install PREFIX=~/.local
             rm -rf /tmp/blesh-src
