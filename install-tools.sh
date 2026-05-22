@@ -28,6 +28,6 @@ if [[ -x "$HOME/.fzf/bin/fzf" ]] || command -v fzf &>/dev/null; then
 else
     echo "Installing fzf..."
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-    ~/.fzf/install --bash --no-zsh --no-fish --no-update-rc
+    ~/.fzf/install
     echo "✅ Fzf installed"
 fi
