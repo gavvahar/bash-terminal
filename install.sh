@@ -25,6 +25,13 @@ else
     echo "✅ ~/.bashrc copied (run 'cp ~/.config/bash-terminal/.bashrc ~/.bashrc' to update)"
 fi
 
+if ln -sf "$INSTALL_DIR/inputrc" "$HOME/.inputrc" 2>/dev/null; then
+    echo "✅ ~/.inputrc symlinked"
+else
+    cp "$INSTALL_DIR/inputrc" "$HOME/.inputrc"
+    echo "✅ ~/.inputrc copied (run 'cp ~/.config/bash-terminal/inputrc ~/.inputrc' to update)"
+fi
+
 # macOS: ~/.bashrc is not sourced by default for login shells
 if [[ "$(uname -s)" == "Darwin" ]]; then
     PROFILE="$HOME/.bash_profile"

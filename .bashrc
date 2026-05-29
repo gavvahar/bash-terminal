@@ -217,6 +217,53 @@ else
     [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 fi
 
+# ── History prefix search (case-insensitive, cycles with Up/Down) ─────────────
+# Used when ble.sh is unavailable (e.g. Git Bash on Windows).
+if [[ -z "${BLE_VERSION-}" ]]; then
+    _hist_pos=0
+    _hist_pfx=""
+
+    __hist_bk() {
+        # If the line no longer starts with our saved prefix, user edited it — reset
+        if (( _hist_pos > 0 )) && [[ "${READLINE_LINE,,}" != "${_hist_pfx,,}"* ]]; then
+            _hist_pos=0
+        fi
+        (( _hist_pos == 0 )) && _hist_pfx="${READLINE_LINE:0:$READLINE_POINT}"
+        (( _hist_pos++ ))
+        local esc match
+        esc=$(printf '%s' "$_hist_pfx" | sed 's/[[\.*^$()+?{}|]/\\&/g')
+        match=$(history | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//' \
+                        | grep -i "^$esc" | tac | sed -n "${_hist_pos}p")
+        if [[ -n "$match" ]]; then
+            READLINE_LINE="$match"
+            READLINE_POINT=${#READLINE_LINE}
+        else
+            (( _hist_pos-- ))
+        fi
+    }
+
+    __hist_fw() {
+        (( _hist_pos <= 0 )) && return
+        (( _hist_pos-- ))
+        if (( _hist_pos == 0 )); then
+            READLINE_LINE="$_hist_pfx"
+            READLINE_POINT=${#READLINE_LINE}
+            return
+        fi
+        local esc match
+        esc=$(printf '%s' "$_hist_pfx" | sed 's/[[\.*^$()+?{}|]/\\&/g')
+        match=$(history | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//' \
+                        | grep -i "^$esc" | tac | sed -n "${_hist_pos}p")
+        if [[ -n "$match" ]]; then
+            READLINE_LINE="$match"
+            READLINE_POINT=${#READLINE_LINE}
+        fi
+    }
+
+    bind -x '"\e[A": __hist_bk'
+    bind -x '"\e[B": __hist_fw'
+fi
+
 # ── Starship prompt ───────────────────────────────────────────────────────────
 if command -v starship &>/dev/null; then
     eval "$(starship init bash)"

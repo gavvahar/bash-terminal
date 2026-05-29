@@ -44,7 +44,7 @@ fi
 # ── ble.sh (fish-style autosuggestions) ──────────────────────────────────────
 case "$(uname -s)" in
     MINGW*|MSYS*|CYGWIN*)
-        echo "⚠️  ble.sh not supported on Git Bash — skipping" ;;
+        echo "⚠️  ble.sh not supported on Git Bash — skipping (Up/Down history search active via readline)" ;;
     *)
         if [ -f "$HOME/.local/share/blesh/ble.sh" ]; then
             echo "✅ ble.sh already installed"
