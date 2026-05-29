@@ -24,6 +24,7 @@ case "${LC_ALL:-${LC_CTYPE:-$LANG}}" in
     *UTF-8*|*utf8*|*utf-8*) ;;
     *) export LC_CTYPE=C.UTF-8 ;;
 esac
+export PYTHONUTF8=1  # Windows defaults to cp1252; force UTF-8 for all python3 calls
 
 # ── History ───────────────────────────────────────────────────────────────────
 HISTCONTROL=ignoreboth
