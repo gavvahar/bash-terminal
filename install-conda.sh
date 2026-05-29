@@ -26,7 +26,7 @@ else
                 --output "$HOME/Miniconda3-latest-Windows-x86_64.exe"
             "$HOME/Miniconda3-latest-Windows-x86_64.exe" \
                 /InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S \
-                /D="$(cygpath -w "$HOME/miniconda3")"
+                /D="$(cygpath -w "$HOME/miniconda3")" || true
             # NSIS silent installer spawns asynchronously — wait before removing exe
             local retries=30
             printf "Waiting for installer to complete"

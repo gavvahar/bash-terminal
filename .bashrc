@@ -522,8 +522,14 @@ fi
 
 # ── conda initialize (optional) ───────────────────────────────────────────────
 case "$(uname -s)" in
-    MINGW*|MSYS*|CYGWIN*) _CONDA_BIN="$HOME/miniconda3/Scripts/conda" ;;
-    *)                     _CONDA_BIN="$HOME/miniconda3/bin/conda"     ;;
+    MINGW*|MSYS*|CYGWIN*)
+        _CONDA_BIN=""
+        for _p in "$HOME/miniconda3" "/c/ProgramData/miniconda3" "$HOME/AppData/Local/miniconda3"; do
+            [[ -x "$_p/Scripts/conda" ]] && _CONDA_BIN="$_p/Scripts/conda" && break
+        done
+        unset _p ;;
+    *)
+        _CONDA_BIN="$HOME/miniconda3/bin/conda" ;;
 esac
 if command -v conda &>/dev/null || [ -x "$_CONDA_BIN" ]; then
     __conda_setup="$("$_CONDA_BIN" 'shell.bash' 'hook' 2>/dev/null)"
