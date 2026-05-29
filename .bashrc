@@ -475,7 +475,10 @@ if [[ ${BLE_VERSION-} ]]; then
 fi
 
 # ── conda initialize (optional) ───────────────────────────────────────────────
-_CONDA_BIN="$HOME/miniconda3/bin/conda"
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) _CONDA_BIN="$HOME/miniconda3/Scripts/conda" ;;
+    *)                     _CONDA_BIN="$HOME/miniconda3/bin/conda"     ;;
+esac
 if command -v conda &>/dev/null || [ -x "$_CONDA_BIN" ]; then
     __conda_setup="$("$_CONDA_BIN" 'shell.bash' 'hook' 2>/dev/null)"
     if [ $? -eq 0 ]; then
