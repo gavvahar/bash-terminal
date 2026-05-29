@@ -122,15 +122,13 @@ _box_width() {
 
 _brow() {
     # Unicode-aware padding: outputs $1 padded to exactly $2 display columns.
-    # bash ${#var} counts bytes; python3 len() counts chars. We adjust the
-    # printf field width to compensate for multibyte chars (e.g. — ◈).
+    # Delegates to Python str.ljust() to avoid byte-vs-char ambiguity across
+    # platforms (Git Bash printf is display-width aware; Linux is byte-aware).
     local text="$1" width="$2"
-    local byte_len=${#text}
-    local char_len
-    char_len=$(BROW_T="$text" python3 -c \
-        "import os; print(len(os.environ['BROW_T']))" 2>/dev/null) \
-        || char_len=$byte_len
-    printf "%-$(( width + byte_len - char_len ))s" "$text"
+    BROW_T="$text" BROW_W="$width" python3 -c \
+        "import os; t=os.environ['BROW_T']; print(t.ljust(int(os.environ['BROW_W'])), end='')" \
+        2>/dev/null \
+        || printf "%-${width}s" "$text"
 }
 
 _sys_ip() {
