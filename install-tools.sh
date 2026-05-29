@@ -9,7 +9,16 @@ if command -v starship &>/dev/null; then
     echo "✅ Starship already installed"
 else
     echo "Installing starship..."
-    curl -sS https://starship.rs/install.sh | sh
+    case "$_OS" in
+        MINGW*|MSYS*|CYGWIN*)
+            # /usr/local/bin doesn't exist in Git Bash; install to ~/.local/bin
+            mkdir -p "$HOME/.local/bin"
+            curl -sS https://starship.rs/install.sh | sh -s -- --bin-dir "$HOME/.local/bin" --yes
+            ;;
+        *)
+            curl -sS https://starship.rs/install.sh | sh -s -- --yes
+            ;;
+    esac
     echo "✅ Starship installed"
 fi
 
