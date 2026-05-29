@@ -27,14 +27,14 @@ else
             "$HOME/Miniconda3-latest-Windows-x86_64.exe" \
                 /InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S \
                 /D="$(cygpath -w "$HOME/miniconda3")"
-            rm "$HOME/Miniconda3-latest-Windows-x86_64.exe"
-            # NSIS silent installer may spawn asynchronously — wait for conda binary
+            # NSIS silent installer spawns asynchronously — wait before removing exe
             local retries=30
             printf "Waiting for installer to complete"
             while [[ ! -x "$CONDA" ]] && (( retries-- > 0 )); do
                 sleep 2; printf "."
             done
             printf "\n"
+            rm -f "$HOME/Miniconda3-latest-Windows-x86_64.exe"
             ;;
         *)
             curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
